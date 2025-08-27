@@ -3,6 +3,35 @@
 #include <unistd.h>
 #include <sys/wait.h>
 
+int make_child(int *pipe_izq) {
+	int num;
+	close(pipe_izq[1]);
+	if(read(pipe_izq[0], &num, sizeof(num)) == 0) return 0;
+	printf("primo %d \n", num);
+	int pipe_der[2];
+
+	if(pipe(pipe_der) == -1) return -1;
+
+	int pid = fork();
+
+	if (pid == -1) return -1;
+
+	if(pid == 0) {
+		make_child(pipe_der);
+	} else {
+		close(pipe_der[0]);
+		int value = 0;
+		while (read(pipe_izq[0], &value, sizeof(value)) != 0) {
+			if(value % num != 0){
+				write(pipe_der[1], &value, sizeof(value));
+			}
+		}
+		close(pipe_der[1]);
+		int status;
+		wait(&status);
+	}
+	return 0;
+}
 int
 main(int argc, char *argv[])
 {
@@ -26,15 +55,7 @@ main(int argc, char *argv[])
 	if (pid == -1) return -1;
 
 	if (pid == 0){
-		close(fd[1]);
-		read(fd[0], &num, sizeof(num));
-		printf("primo %d \n", num);
-		int value = -1;
-		while (read(fd[0], &value, sizeof(value)) != 0) {
-			if(value % num != 0){
-
-			}
-		}
+		make_child(fd);
 	} else {
 		close(fd[0]);
 		int i = 3;
