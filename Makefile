@@ -19,3 +19,6 @@ clean:
 	rm -f $(PROGS) *.o core vgcore.*
 
 .PHONY: all clean format test
+
+formatear:
+	clang-format -i *.c
