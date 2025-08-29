@@ -26,9 +26,9 @@ make_child(int *pipe_izq)
 
 	if (pid == 0) {
 		close(pipe_izq[0]);
-		/* close(pipe_izq[1]); */
 		close(pipe_der[1]);
 		make_child(pipe_der);
+		close(pipe_izq[1]);
 	} else {
 		close(pipe_der[0]);
 		int value = 0;
