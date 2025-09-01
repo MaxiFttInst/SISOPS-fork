@@ -9,6 +9,82 @@
 #include <string.h>
 #include <stdbool.h>
 
+typedef struct {
+	char *items[NARGS + 2];
+	int index;
+} Args;
+
+Args *
+args_init(char *command)
+{
+	Args *args = malloc(sizeof(Args));
+	args->items[NARGS + 1] = NULL;
+	args->items[0] = malloc(strlen(command) + 1);
+	args->index = 1;
+	strcpy(args->items[0], command);
+	return args;
+}
+void
+args_empty(Args *args)
+{
+	for (int i = 1; i < NARGS + 1; i++) {
+		free(args->items[i]);
+		args->items[i] = NULL;
+	}
+	args->index = 1;
+}
+
+void
+args_add(Args *args, char *arg)
+{
+	if (args->index == NARGS + 1) {
+		args_empty(args);
+	}
+	args->items[args->index] = malloc(strlen(arg) + 1);
+	strcpy(args->items[args->index], arg);
+	args->index += 1;
+}
+
+bool
+args_is_full(Args *args)
+{
+	return (args->index == NARGS + 1);
+}
+bool
+args_is_empty(Args *args)
+{
+	return (args->index == 1);
+}
+int
+args_exec(Args *args)
+{
+	int pid = fork();
+	if (pid == -1)
+		return pid;
+	if (pid == 0) {
+		execvp(args->items[0], args->items);
+		exit(0);
+	} else {
+		wait(NULL);
+	}
+
+	return 0;
+}
+void
+args_print(Args *args)
+{
+	for (int i = 0; i < NARGS + 1; i++) {
+		printf("%s", args->items[i]);
+	}
+}
+void
+args_free(Args *args)
+{
+	for (int i = 0; i < NARGS; i++) {
+		free(args->items[i]);
+	}
+	free(args);
+}
 
 int
 main(int argc, char *argv[])
@@ -21,65 +97,21 @@ main(int argc, char *argv[])
 
 	char *command = argv[1];
 
+	Args *args = args_init(command);
 	size_t len = 0;
 
-	size_t array_size = 0;
-	size_t array_cap = 5;
-	char ***args = malloc(sizeof(char **) * array_cap);
-
-	for (size_t i = 0; i < array_cap; i++) {
-		args[i] = malloc(sizeof(char *) * (NARGS + 1));
-	}
-
-	int arg_count = 0;
 	while (getline(&line, &len, stdin) != -1) {
-		if (arg_count % NARGS == 0){
-			args[array_size][0] = command;
-			args[array_size][NARGS] = NULL;
-			array_size++;
-
+		if (args_is_full(args)) {
+			args_exec(args);
+			args_empty(args);
 		}
-		if(array_size == array_cap -1) {
-			array_cap *= 2;
-			args = realloc(args, sizeof(char**) * array_cap);
-		}
-		char *arg = malloc(sizeof(char) * len);
-		strcpy(arg, line);
-		args[array_size][1 + (arg_count % 4)] = arg;
-		arg_count++;
+		args_add(args, line);
+		/* args_print(args); */
 	}
-	bool can_fork = true;
-	size_t fork_count = 0;
-	while(can_fork){
-		int pid = fork();
-		if (pid == 0) {
-			can_fork = false;
-
-			execvp(args[fork_count][0], args[fork_count]);
-
-		} else {
-			fork_count++;
-			if(fork_count == array_size){
-				can_fork = false;
-			}
-			wait(NULL);
-		}
+	if (!args_is_empty(args)) {
+		args_exec(args);
 	}
-
-	int counter = 0;
-	for (size_t j = 0; j < array_size; j++) {
-		for (size_t i = 1; i < NARGS; i++) {
-			if(counter < arg_count){
-				/* printf("%s", args[j][i]); */
-				free(args[j][i]);
-				counter++;
-			}
-		}
-	}
-	for (size_t i = 0; i < array_cap; i++) {
-		free(args[i]);
-	}
-	free(args);
+	args_free(args);
 	free(line);
 	return 0;
 }
