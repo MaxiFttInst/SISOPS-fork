@@ -101,6 +101,7 @@ main(int argc, char *argv[])
 	size_t len = 0;
 
 	while (getline(&line, &len, stdin) != -1) {
+		line[strcspn(line, "\n")] = '\0';
 		if (args_is_full(args)) {
 			args_exec(args);
 			args_empty(args);
