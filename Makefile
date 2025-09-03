@@ -6,7 +6,7 @@ PROGS := primes xargs
 
 all: $(PROGS)
 
-xargs: xargs.o
+xargs: xargs.o command.o
 primes: primes.o
 
 test:
